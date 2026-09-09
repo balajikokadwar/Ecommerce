@@ -1,0 +1,11 @@
+# Default framework configuration.
+# Any key here can be overridden at runtime with an environment variable of
+# the same name in UPPERCASE (see utils/config_reader.py), which is how the
+# CI pipeline / nightly job customizes behaviour without touching this file.
+
+base_url: "https://rahulshettyacademy.com/client/#/auth/login"
+browser: "chrome"          # chrome | firefox | edge
+headless: false
+explicit_wait: 15          # seconds, used by WebDriverWait across all pages
+page_load_timeout: 30       # seconds
+screenshot_on_failure: true

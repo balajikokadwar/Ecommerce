@@ -1,0 +1,4 @@
+selenium==4.48.0
+behave==1.3.3
+python-dotenv==1.2.3
+PyYAML==6.0.3

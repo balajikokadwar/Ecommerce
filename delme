@@ -1,0 +1,30 @@
+jobs:
+  determine-suite:
+    runs-on: ubuntu-latest
+    outputs:
+      suite: ${{ steps.detect.outputs.suite }}
+    steps:
+      - name: Detect suite from branch name
+        id: detect
+        run: |
+          BRANCH="${{ github.head_ref || github.ref_name }}"
+          echo "Branch is: $BRANCH"
+
+          if [[ "$BRANCH" == *"routerconnect"* ]]; then
+            echo "suite=routerconnect" >> "$GITHUB_OUTPUT"
+          elif [[ "$BRANCH" == *"switchs"* ]]; then
+            echo "suite=switchs" >> "$GITHUB_OUTPUT"
+          else
+            echo "suite=all" >> "$GITHUB_OUTPUT"
+          fi
+
+  run-tests:
+    needs: determine-suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run selected suite
+        run: |
+          SUITE="${{ needs.determine-suite.outputs.suite }}"
+          echo "Running suite: $SUITE"
+          # e.g. pytest tests/$SUITE/  OR  npx cypress run --spec "cypress/e2e/$SUITE/**"

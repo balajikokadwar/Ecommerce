@@ -1,0 +1,137 @@
+name: BDD Tests
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - main
+  schedule:
+    # Nightly full-regression run. GitHub Actions only fires scheduled
+    # workflows on the DEFAULT branch, regardless of what's configured here.
+    - cron: '30 1 * * *'   # 01:30 UTC every day
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Behave tag to run (e.g. @login, @home, @cart, @smoke, @regression). Leave blank to auto-detect from the branch name.'
+        required: false
+        default: ''
+
+concurrency:
+  group: bdd-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Run BDD tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # ubuntu-latest runner images ship with Google Chrome pre-installed,
+      # and Selenium Manager (bundled with Selenium 4.6+) auto-resolves the
+      # matching driver — no separate driver install step is needed.
+
+      - name: Resolve which module/tag to run
+        id: resolve_tag
+        shell: bash
+        run: |
+          set -e
+
+          # 1. Manual run with an explicit tag always wins.
+          if [ -n "${{ github.event.inputs.tag }}" ]; then
+            echo "tag=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
+            echo "Manual override tag: ${{ github.event.inputs.tag }}"
+            exit 0
+          fi
+
+          # 2. Nightly schedule always runs the full regression suite.
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "tag=@regression" >> "$GITHUB_OUTPUT"
+            echo "Nightly scheduled run -> executing full @regression suite"
+            exit 0
+          fi
+
+          # 3. Otherwise, derive the module from the branch name.
+          #    PRs use the head branch (github.head_ref); direct pushes use
+          #    github.ref_name.
+          BRANCH_NAME="${{ github.head_ref || github.ref_name }}"
+          BRANCH_NAME_LOWER=$(echo "$BRANCH_NAME" | tr '[:upper:]' '[:lower:]')
+          echo "Resolved branch name: $BRANCH_NAME_LOWER"
+
+          # Add new module keywords here as new page objects/features land.
+          MODULES=("login" "home" "cart")
+          TAG=""
+          for m in "${MODULES[@]}"; do
+            if [[ "$BRANCH_NAME_LOWER" == *"$m"* ]]; then
+              TAG="@$m"
+              break
+            fi
+          done
+
+          if [ -z "$TAG" ]; then
+            TAG="@smoke"
+            echo "No module keyword matched in branch name -> defaulting to @smoke"
+          else
+            echo "Matched module tag: $TAG"
+          fi
+
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Run Behave tests
+        env:
+          LOGIN_EMAIL: ${{ secrets.LOGIN_EMAIL }}
+          LOGIN_PASSWORD: ${{ secrets.LOGIN_PASSWORD }}
+          HEADLESS: "true"
+        run: |
+          echo "Running behave with tag filter: ${{ steps.resolve_tag.outputs.tag }}"
+          behave --tags=${{ steps.resolve_tag.outputs.tag }}
+
+      # `behave` exits 0 even when a --tags filter matches zero scenarios
+      # (e.g. a branch resolves to a tag that no feature carries yet), which
+      # would otherwise show as a green/passing check despite testing
+      # nothing. Fail loudly instead.
+      - name: Verify at least one scenario actually ran
+        shell: bash
+        run: |
+          python - <<'PY'
+          import glob
+          import sys
+          import xml.etree.ElementTree as ET
+
+          files = glob.glob("reports/junit/*.xml")
+          total = 0
+          skipped = 0
+          for f in files:
+              root = ET.parse(f).getroot()
+              total += int(root.attrib.get("tests", 0))
+              skipped += int(root.attrib.get("skipped", 0))
+          executed = total - skipped
+
+          print(f"JUnit files: {len(files)}, tests: {total}, skipped: {skipped}, actually executed: {executed}")
+          if executed <= 0:
+              print("::error::No scenarios matched tag '${{ steps.resolve_tag.outputs.tag }}' (all were "
+                    "skipped) — failing explicitly instead of reporting a false pass.")
+              sys.exit(1)
+          PY
+
+      - name: Upload test reports (logs, screenshots, JUnit XML)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bdd-test-reports-${{ github.run_id }}
+          path: reports/
+          retention-days: 14
