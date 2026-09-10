@@ -77,9 +77,9 @@ class ConfigReader:
 
     @classmethod
     def login_email(cls) -> str:
-        return cls.get("LOGIN_EMAIL")
+        return cls.get("login_email")
 
 
     @classmethod
     def login_password(cls) -> str:
-        return cls.get("LOGIN_PASSWORD")
+        return cls.get("login_password")
