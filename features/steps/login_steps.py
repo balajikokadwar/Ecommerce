@@ -2,7 +2,7 @@ from behave import given, when, then
 
 from utils.config_reader import ConfigReader
 
-
+# steps folder
 @given("the user is on the login page")
 def step_open_login_page(context):
     context.login_page.load()
