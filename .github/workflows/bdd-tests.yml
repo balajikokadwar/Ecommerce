@@ -92,10 +92,10 @@ jobs:
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
       - name: Run Behave tests
-        env:
-          LOGIN_EMAIL: ${{ secrets.LOGIN_EMAIL }}
-          LOGIN_PASSWORD: ${{ secrets.LOGIN_PASSWORD }}
-          HEADLESS: "true"
+        # env:
+        #   LOGIN_EMAIL: ${{ secrets.LOGIN_EMAIL }}
+        #   LOGIN_PASSWORD: ${{ secrets.LOGIN_PASSWORD }}
+        #   HEADLESS: "true"
         run: |
           echo "Running behave with tag filter: ${{ steps.resolve_tag.outputs.tag }}"
           behave --tags=${{ steps.resolve_tag.outputs.tag }}
