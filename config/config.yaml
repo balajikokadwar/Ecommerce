@@ -5,7 +5,7 @@
 
 base_url: "https://rahulshettyacademy.com/client/#/auth/login"
 browser: "chrome"          # chrome | firefox | edge
-headless: true
+headless: false
 explicit_wait: 15          # seconds, used by WebDriverWait across all pages
 page_load_timeout: 30       # seconds
 screenshot_on_failure: true
