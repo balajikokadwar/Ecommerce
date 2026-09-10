@@ -77,20 +77,9 @@ class ConfigReader:
 
     @classmethod
     def login_email(cls) -> str:
-        value = os.getenv("LOGIN_EMAIL")
-        if not value:
-            raise RuntimeError(
-                "LOGIN_EMAIL is not set. Add it to your .env file locally, "
-                "or as a secret/environment variable in CI."
-            )
-        return value
+        return cls.get("login_email")
+
 
     @classmethod
     def login_password(cls) -> str:
-        value = os.getenv("LOGIN_PASSWORD")
-        if not value:
-            raise RuntimeError(
-                "LOGIN_PASSWORD is not set. Add it to your .env file locally, "
-                "or as a secret/environment variable in CI."
-            )
-        return value
+        return cls.get("login_password")
