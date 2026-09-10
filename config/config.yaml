@@ -9,5 +9,5 @@ headless: true
 explicit_wait: 15          # seconds, used by WebDriverWait across all pages
 page_load_timeout: 30       # seconds
 screenshot_on_failure: true
-LOGIN_EMAIL: "balajikokadwar19@gmail.com"
-LOGIN_PASSWORD: "India@123"
+login_email: "balajikokadwar19@gmail.com"
+login_password: "India@123"
